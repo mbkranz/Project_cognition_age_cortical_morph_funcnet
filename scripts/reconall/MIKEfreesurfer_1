@@ -1,0 +1,28 @@
+#!/bin/bash -x
+#converts the raw MPRAGE into a .mgz (file format for freesurfer), copies this into each subject's folder in the Volumes_FS folder
+#created by Gillian Cooke
+#last edited 05/25/2012 
+ 
+pwd="/Volumes/HealthAging/PRIME/PreprocData"
+fspwd="/Volumes/Users/mbkranz/projects/ACT_Freesurfer_MIke2"
+cd ${pwd}
+subList=$(ls -d *_1)
+cd ${fspwd}
+
+for sub in $subList
+do
+    echo ${sub}
+    mkdir ${sub}
+    cd ${fspwd}/${sub}
+    mkdir mri
+    cd mri
+    mkdir orig
+    cp ${pwd}/${sub}/image/MPRAGE/MPRAGE.nii.gz MPRAGE.nii.gz
+    mri_convert MPRAGE.nii.gz 001.mgz
+    cp 001.mgz ${fspwd}/${sub}/mri/orig
+    cd ${fspwd}
+
+done
+
+
+
