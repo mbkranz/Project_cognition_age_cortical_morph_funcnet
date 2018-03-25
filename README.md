@@ -4,7 +4,7 @@ predicting_cognition_cortical_morphometry_functional_networks
 
 __Note__
 
-This repository only contains the `scripts/` directory from my local git repo but I have included descriptions of all files and subdirectories for better understanding of my workflow.
+- This repository only contains the `scripts/` directory from my local git repo but I have included descriptions of all files and subdirectories for better understanding of my workflow.
 
 - The input is a set of subjects run through the Freesurfer reconstruction stream (recon-all) and resampled to fsaverage using the recon-all -qcache flag in addition to subject data in csv file with cognitive scores (ie.., memory and executive function ability scores and covariates of age and gender).
 
@@ -13,7 +13,9 @@ __________
 ## Directories (with file contents)
 __________
 
-`manuscript_inprep.Rmd` : the working version of markdown manuscript displaying results. Much of the code for producing R figures and tables is taken from individual R scripts. All figures created in python are loaded as PNG files.
+`manuscript_inprep.(Rmd|pdf)` : the working version of markdown manuscript displaying results. Much of the code for producing R figures and tables is taken from individual R scripts. All figures created in python are loaded as PNG files.
+To view document, see the __pdf__ version.
+
 
 ### scripts/
 

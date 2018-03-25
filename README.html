@@ -129,15 +129,15 @@ $(document).ready(function () {
 </tbody>
 </table>
 <p><strong>Note</strong></p>
-<p>This repository only contains the <code>scripts/</code> directory from my local git repo but I have included descriptions of all files and subdirectories for better understanding of my workflow.</p>
 <ul>
-<li>The input is a set of subjects run through the Freesurfer reconstruction stream (recon-all) and resampled to fsaverage using the recon-all -qcache flag in addition to subject data in csv file with cognitive scores (ie.., memory and executive function ability scores and covariates of age and gender).</li>
+<li><p>This repository only contains the <code>scripts/</code> directory from my local git repo but I have included descriptions of all files and subdirectories for better understanding of my workflow.</p></li>
+<li><p>The input is a set of subjects run through the Freesurfer reconstruction stream (recon-all) and resampled to fsaverage using the recon-all -qcache flag in addition to subject data in csv file with cognitive scores (ie.., memory and executive function ability scores and covariates of age and gender).</p></li>
 </ul>
 <hr />
 <div id="directories-with-file-contents" class="section level2">
 <h2>Directories (with file contents)</h2>
 <hr />
-<p><code>manuscript_inprep.Rmd</code> : the working version of markdown manuscript displaying results. Much of the code for producing R figures and tables is taken from individual R scripts. All figures created in python are loaded as PNG files.</p>
+<p><code>manuscript_inprep.(Rmd|pdf)</code> : the working version of markdown manuscript displaying results. Much of the code for producing R figures and tables is taken from individual R scripts. All figures created in python are loaded as PNG files. To view document, see the <strong>pdf</strong> version.</p>
 <div id="scripts" class="section level3">
 <h3>scripts/</h3>
 <p><strong>The following scripts are in order of workflow</strong> 1. <code>make_npdata_from_pca.R</code> : runs principal component analysis from individual tasks and makes composite scores.</p>
