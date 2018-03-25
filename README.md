@@ -9,12 +9,13 @@ This repository only contains the `scripts/` directory from my local git repo bu
 - The input is a set of subjects run through the Freesurfer reconstruction stream (recon-all) and resampled to fsaverage using the recon-all -qcache flag in addition to subject data in csv file with cognitive scores (ie.., memory and executive function ability scores and covariates of age and gender).
 
 __________
-##Directories (with file contents)
+
+## Directories (with file contents)
 __________
 
 `manuscript_inprep.Rmd` : the working version of markdown manuscript displaying results. Much of the code for producing R figures and tables is taken from individual R scripts. All figures created in python are loaded as PNG files.
 
-###scripts/
+### scripts/
 
 __The following scripts are in order of workflow__
 1. `make_npdata_from_pca.R` : runs principal component analysis from individual tasks and makes composite scores.
@@ -60,7 +61,7 @@ shuffled stats) obtained from `regression_mediation_pervertex_wholebrain.ipynb`
   2. p value average and percent selected across splits/iterations
 ### cv_splits/ : contains indices for splits across iterations (i.e., pickle file created from balanced_cv fxn from cv_results*.ipynb)
 
-###data/ :
+### data/ :
 1. output from the python scripts for cv results and prediction values which were inputted into R
 scripts for stats/figures
 2. wholebrain_bootstrap/
