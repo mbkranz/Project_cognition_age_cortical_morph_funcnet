@@ -1,0 +1,850 @@
+---
+title: "The Cortical Morphometry of Functional Networks Associated with Age-Related Cognitive Abilities in Older Adults"
+output:
+  html_document: default
+bibliography: /Users/michaelkranz/Documents/mendeley_references/Predicting_Cognition_CorticalMorph.bib
+---
+
+```{r setup, include=FALSE}
+require(knitr)
+opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE,
+  out.width = '100%',
+  out.height = '100%',
+  fig.align = 'center'
+  )
+opts_knit$set(root.dir = "../figures")
+library(tidyverse)
+library(magrittr)
+library(kableExtra)
+library(gridExtra)
+library(knitr)
+library(formattable)
+library(captioner)
+library(latex2exp)
+```
+
+
+```{r captions, results='hide'}
+#figure and table caption functions
+figs <- captioner(prefix="Figure")
+tbls <- captioner(prefix="Table")
+figs(name = 'yeo_parc',
+     caption=
+       'The functional network parcellations from Yeo and colleagues (2011) used in the current study (network colors: visual=violet, somatomotor=blue, dorsal attention=green, ventral attention=fusia, limbic=cream, frontoparietal=orange, default mode=red))'
+     )
+tbls(name = 'pca_table',
+     caption = 
+       'Principal component analysis component loadings after varimax rotation'
+     )
+figs(name = 'workflow',
+     caption = 
+       'A schematic of the cross validation workflow for prediction analyses (displayed as 7 steps with steps 1-6 describing the model train and test workflow within each cross validation fold).'
+     )
+figs(name = 'cognition',
+     caption = 
+       'The relationship of cortical thickness-based cognitive predictions and actual cognitive predictions controlling for only gender (left) and for gender and global thickness (right) with 95% bootstrapped CIs. The leftmost bar outlined in black are the average values across different feature selection methods (used for inferences). The next three bars to the right display the three alpha parameter feature selection methods and the last bar displays the percentile feature selection method.)'
+     )
+figs(name = 'age',
+     caption=
+       'The relationship of cortical thickness-based cognitive predictions (average of feature selection methods) and age controlling for only gender (left) and for gender and global thickness (right) with 95% bootstrapped CIs.'
+     )
+figs(name = 'mediation',
+     caption=
+       'The mediation effect estimates (with 95% bootstrapped CIs) of cortical thickness-based cognitive predictions (average of feature selection methods) from mediation models controlling for only gender (left) and for gender and global thickness (right).'
+     )
+figs(name = 'numvertex',
+     caption = 
+       'Number of individual vertices selected within each network based on bootstrap ratio for threshold of a BSR of 4.25 (left bars) and 3.3 (right bars). The shaded regions show the number of significant regions by chance (i.e., shuffled vertices). Also displayed are the standard bars for each of the networks shuffled analyses (in black). Note, these were quite small which gives them the appearance of a thick black line.'
+     )
+figs(name = 'spatial_pattern',
+     caption = 
+       'Bootstrap ratios across the cortical overlaid on the color-coded functional network boundaries. The black outlines surround regions displaying a significant mediation effect. Displayed in these figures is the 2.9 threshold for both analyses (predicting cognition and age-cognition mediation) '
+     )
+```
+__Notes__
+- Based on feedback from a preliminary version of this manuscript, I am including a more comprehensive analysis of predictions with surface area in addition to thickness. All figures and tables in results incorporate these analyses but text in the results and discussion section still need to incorporated. 
+- See to do list at bottom of document (before references)
+
+# Abstract
+
+Age and cognition are both associated with cortical structure, but characterizing the relationship remains a challenge. Here, we use a functional network organization of the cortex as an organizing principle to investigate whether the cortical morphometry (thickness and surface area) of individual networks predicts cognition and mediates the age-cognition relationship in community-dwelling older adults. We use a novel data-driven approach to obtain cortical morphometry-based predictions of age-related cognitive abilities (executive function and declarative memory). We found that cortical thickness, rather than surface area, robustly predicted cognition and mediated the age-cognition relationship across the majority of functional networks (i.e., a widespread or global pattern). A network-specific pattern emerged (albeit weaker than the thickness pattern) for predictions with surface area. Specifically, _an increase_ in surface area of the attention and control networks (networks widely considered as important for executive function) predicted executive function, but not memory. In contrast, _less_ surface area of the somatomotor cortex predicted memory but not executive function (surface area of all other networks were insignificant). Network-specific effects emerged for cortical thickness when controlling for global thickness. The default mode and somatomotor network showed evidence of predicting declarative memory and executive function abilities. In contrast, thickness of the ventral attention network only predicted executive function over and above global thickness. Each of these three networks partially mediated the age-cognition relationship but was strongest for executive function. These results provide a potential approach to organize and describe the apparent widespread regional cortical structural relationships with cognition and age in older adults.
+
+# Introduction
+
+The cognitive neuroscience of aging’s goal is to link the well-established effects of aging on cognition to the effects of aging on brain structure and function [@Cabeza2016]. The functional interactions of regions in cognitively-relevant networks, such as the default mode, frontal parietal, dorsal attention, and salience networks, decline during aging [@Andrews-Hanna2007; @Voss2010; @Voss2013; @Voss2016; @Betzel2014; @Geerligs2014; @Onoda2014]. Therefore, these functional network-based approaches have emerged as a powerful organizing principle to describe the role of brain function in cognitive aging.
+
+In contrast, how the relationship of structure and cognition is organized in older adults remains largely unclear. A large number of studies have found associations between regional cortical volume, higher level cognition, and age within anatomically-defined regions of interest, particularly within the prefrontal cortex [e.g., @Head2008; @Kirchhoff2014; @Gunning-Dixon2003]. However, these prefrontal volumetric measures have shown a limited relationship with age-related cognition over and above global volumetric measures [@Bettcher2016] and have negatively predicted cognition in some older adult samples, giving rise to uncertainty as to what it is measuring [@VanPetten2004; @Salthouse2011a]. And, importantly, age-related decreases in brain volume are more global and widespread than confined to anatomical regions [@Storsve2014; @Hogstrom2013]. Taken together, alternative organizing principles [rather than those based on anatomical landmarks] and measures of cortical structure [rather than volume] must be investigated, especially in older adults. 
+
+One potential issue is that cortical volume is the product of cortical surface area and thickness, which appear to measure distinct attributes of the brain [@Sanabria-Diaz2010; @Winkler2012; @Rakic2009]. Surface area expansion during development is thought to bring interconnected regions closer together—a process thought to increase brain connectivity more efficiently than increases in cortical thickness— resulting in higher levels of cognitive ability [@VanEssen1997; @White2010]. On the other hand, although cortical surface area is more correlated to volume than thickness, thickness contributes more to the age-related decline in cortical volume [@Storsve2014] and may reflect age-related neuronal deterioration such as decreased cell body size or synaptic connections between neurons [@Freeman2008]. Thus, thickness may be related to individual differences in cognition as a result of age-related structural changes where as cortical surface area may be related to cognition through preexisting genetic differences. Indeed, cortical thickness is most related to cognition later in life as opposed to relationships in younger adults [presumably due to age-related effects and increased variance with age across samples; @Razlighi2016; @Schnack2014; @Burzynska2012].   
+
+In regards to the organization of age-related decline across the cortex, a promising hypothesis is that age-related cortical thinning largely falls within age- and cognitively-related functional networks rather than traditional theories based on structural anatomical locations [e.g., ‘frontal lobe hypothesis’; @Fjell2013a; @Fjell2013b]. Supporting this view, individual variation in cortical thickness across regions displays a similar organization as functional networks and does not necessarily follow structural anatomy [@Bullmore2009; @Alexander-Bloch2013; @Hosseini2013; @Park2017; @He2007; @Chen2008; @Chen2011].  
+
+How cortical morphometric measures of these functional networks relate to cognition and age may provide important steps towards understanding the organization of regional cortical structure-cognition relationships, especially in older adults. @Fjell2013b observed widespread cortical thinning most pronounced within regions implicated in the default-mode network, a functional network sensitive to age-related functional integrity [@Andrews-Hanna2007; @Voss2010; @Voss2016; @Betzel2014; @Geerligs2014]. @Mcginnis2011 compared the relationship of cortical thickness of older- and middle-aged adults to young adults in four broad functionally defined cortical areas [two associative networks, a paralimbic network, and a sensory network] and found that cortical thinning was not confined to the hypothesized associative cortical areas but was more widespread and global. However, within these broadly defined areas, functionally distinct networks exist. For example, within the broadly defined associative areas, a frontal parietal, default mode, ventral attention, and dorsal attention network exists, and sensory areas can be parcelleated into somatomotor and visual networks [@Yeo2011; @Power2011]. While cortical thickness relationships may be widespread, a more nuanced picture of functional architecture may reveal a stronger relationship with more cognitive-specific networks.  Furthermore, controlling for global thickness may be productive in showing regional associations over and above general global effects.
+
+It remains unclear how the cortical morphometry of these more fine-grained age- and cognitive- related networks [@Andrews-Hanna2007; @Voss2010] is associated with cognition and age in older adults. A few studies have interpreted whole brain, exploratory analyses in terms of functional networks after discovering associations between cortical thickness and executive function task performance. However, while results were discussed in terms of task-related functional activation, there were no explicit inferential tests to examine the validity to these interpretations [e.g., @Burzynska2012; @Westlye2011]. Similarly, @Sun2016 used a-priori defined functional networks to guide follow up tests of an exploratory whole brain analysis showing regional cortical thickness associations of declarative memory task performance.  They found that the strongest associations were within the ventral attention [salience] and default mode networks compared to regions located outside these two functional networks. However, despite the whole-brain analysis, the focus of these follow up analyses was on two functional networks, disregarding other cognitive-relevant functional networks [e.g., fronto-parietal and dorsal attention networks]. Furthermore, it is unclear why only some of the significant regions outside the two functional networks of interest were used as control regions.  In addition, the use of individual tasks may make conclusions about the cognitive abilities in which they intend to measure less valid and reliable [@Salthouse2004]. Using multiple tasks to define cognitive abilities as latent variables  [i.e., executive function or declarative memory] has the advantage of increased reliability and decreased task-specific [i.e., unrelated to the construct it which it intends to measure] processes, leading to more stable individual difference measures [@Friedman2017; @Braver2010]. 
+
+Furthermore, how cortical thickness mediates the effects of age on cognition may provide clues as to how brain structure influences cognitive function through age related processes [@Salthouse2011a]. @Hedden2014 found that global cortical thickness mediates the age-cognition relationship for both declarative memory and executive function abilities in older adults. @Salthouse2015 found no shared variance of regional cortical thickness—based on individual anatomy—with cognition and age that could not be accounted for by global thickness.  Thus, while the role of global thickness seems to be firmly established, discovering more regional relationships over and above global thickness may require finding alternative organizing principles of cortical structure. Here, we use functional networks as this organizing principle.
+
+In the current investigation, we explore the importance of cortical morphometry [cortical thickness and surface area] of a-priori defined functional networks parcellating the entire neocortex [@Yeo2011] in its relationship with cognition and its mediating influence on the age-cognition relationship. Importantly, we combine performance on multiple laboratory and neuropsychological tasks to define two of the most widely researched cognitive constructs implicated in age-related decline—executive function and declarative memory—thought to share common and distinct processes in cognitive aging [@Buckner2004]. We reasoned that cortical morphometry may capture the structural integrity of some individual functional networks more than others but some regions within these networks may be more important than others for different cognitive abilities [akin to using different amounts of muscle for different strength training exercises]. Thus, in a cross-validated procedure, we identified local regions associated with cognitive ability [see @Voormolen2010] circumscribed within hypothesis-driven individual functional networks [see Figure 2 for an explanation of the procedure]. Subsequently, we predicted cognitive abilities of individuals held out from the training set [i.e., test set] with the average cortical thickness of these selected regions [for a similar approach with functional connectivity, see @Shen2017]. The chosen functional network parcellation [7 network parcellation in @Yeo2011] has shown sensitivity to age-related effects in terms of functional connectivity in a previous study [@Betzel2014] and used the same cortical surface-based registration procedure [i.e., Freesurfer] as the current study to define cortical functional networks.
+
+We interpret the importance of functional networks to cortical morphometric associations with cognition through each functional network’s 1.) predictive ability and 2.) spatial extent of this relationship.
+
+We hypothesized that default mode network cortical thickness may be particularly important for relationships with declarative memory ability, given its well established role in age- related functional declines [@Andrews-Hanna2007; @Voss2010; @Voss2016; @Betzel2014; @Geerligs2014], its hypothesized role in age-related structural declines [@Fjell2013b], and its importance in declarative memory encoding processes [@Shapira-Lichter2013]. However, the default mode network functional integrity has also been associated with executive function and processing speed in older adults, suggesting its role in more general cognitive ability in aging [@Andrews-Hanna2007; @Voss2010; @Voss2013; @Onoda2014]. 
+
+Executive function relies on the control of attentional processes; these control processes are thought to largely rely on the flexible communication of the fronto-parietal network [FPN] with other networks [@Cole2013]. Thus, the cortical morphometry of the FPN may be particularly important in relationships with executive function ability [@Burzynska2012]. In addition, the interplay of attentional networks (i.e., the dorsal and ventral attention networks) is also important for efficiently selecting appropriate stimuli, a process particularly important for executive function tasks [@Corbetta2002].
+
+On the other hand, the primary sensory networks are often used as control regions and may not have as strong of a relationship with age and cognition as the other associative networks. Supporting this view, @Head2008 found the volume of the visual cortex—defined based on structural landmarks—was unrelated to declarative memory, executive function, and age [@Head2008]. However, the other sensory network, the somatomotor network, remains unclear. In terms of functional integrity, some studies have found internetwork connectivity within the somatomotor network, along with other networks [i.e., the default mode network], to be sensitive to changes in age [@Betzel2014] while others have found the functional integrity within the sensorimotor and visual networks to be unrelated to age [@Geerligs2014; @Voss2016]. In terms of brain structure and cognition in older adults, @Burzynska2012 and @Sun2016 reported significant clusters of cortical thickness in the somatomotor cortex yet the interpretation of these clusters were not discussed or selected for further post-hoc analyses which illustrates the importance of the current analyses. In regards to aging, some whole brain studies have shown widespread cortical thinning including the somatomotor and visual cortex as well [@Salat2004].
+
+#Methods
+##Participants
+```{r load_npdata,include=FALSE}
+#final filtered dataset used in analyses
+npdata<-
+  read_csv(
+    '../data/np_filter_wb_gendernum.csv'
+    )
+```
+```{r demographics}
+#get full dataset (with all participants) and demog vars
+#get final dataset with list of included subjects
+data_raw<- 
+  readxl::read_excel(
+    "../data/ACT_NP.xlsx",
+    sheet='All Subjects')
+data_filt<-
+  data_raw %>% 
+  filter(MRIPre==1)
+demogs_final<-
+  data_raw %>% 
+  filter(Subject_ID %in% npdata[['subs']]) %>%
+  select(Gender,matches('Age|Years.*Education'))
+
+comp_baseline<-table(data_raw$EligiblePre)['1']
+education<-psych::describe(demogs_final$Years_of_Education)
+age<-psych::describe(demogs_final$Age_at_start_of_study)
+gender<-table(demogs_final$Gender)
+
+```
+
+Two hundred thirty five community dwelling older adults were recruited. To be eligible, participants were required to be right-handed, score at least a 23 on the mini-mental state examination (MMSE), and have no MRI contraindications (e.g., metal in body, no claustrophobia).  Before starting the first session, participants provided written consent. `r comp_baseline` participants completed three sessions of baseline screening, neuropsychological, and neuroimaging testing. In these baseline sessions, participants underwent 2 sessions of cognitive testing and 1 session of neuroimaging testing in a fixed session and task order.  
+
+Finally, after data collection, we screened for good MRI data quality (e.g., evidence of motion affecting MRI processing procedures or pathology). The final sample used for analyses included `r length(npdata)` participants (`r gender['female']` female) between`r age$min` - `r age$max` years of age (M: `r age$mean`, SD:  `r age$sd`) with an average of `r education$mean` (self-reported) years of education (SD: `r education$sd`). 
+
+##Cognitive tasks
+Cognitive tasks previously used in aging research were selected to examine a variety of cognitive abilities falling under domains implicated in age-related decline including long term memory, processing speed, and executive function.
+
+To group cognitive tasks in order to create cognitive ability scores, we used a data-driven approach. That is, we ran a principal component analysis with a varimax rotation. We retained the first two components as they occurred before the inflexion point [@Horn1966]. Although one might expect processing speed to emerge as an independent component [e.g., @Hedden2014], the first component grouped perceptual speed and executive function together. However, the processing speed tasks used in the current study can also be conceptualized as executive function tasks given the high demand on comparison processes [see @Ackerman1988] and share a tight link with more traditional executive function tasks [@Salthouse2004; @Salthouse2005]. Thus, the first component appeared to capture  “common” executive function ability as conceptualized elsewhere [@Friedman2017]. The second principal component largely agreed with previous work on declarative memory using a subset of the current sample [@Monti2015] with the exception of Category Fluency, which loaded most highly on the declarative memory component despite traditionally being thought of as an executive function task. This could be due to processes involving retrieval from long-term memory [@Unsworth2014]. For each component, we averaged the standardized scores for tasks that demonstrated the higher loading onto that component compared with the other component [no loading was below .5 for the component in which it belong too with the exception of NBack with a loading of .46 on the Executive Function component; Table 1]. 
+Below are brief descriptions of each task for each cognitive ability [i.e., component from the PCA]:
+
+
+```{r pca_table}
+#This code is taken from the make_npdata_frompca.R script
+windsorizefxn<-function(data,
+                        variablelist,
+                        outlieroutput=FALSE,
+                        replaceval=TRUE,
+                        std=3){
+  'outliers (outputs a list: 
+  [1] windsorized value data set and 
+  [2]makes a list of subject outliers per task)'
+  #if data.table from dplyr can't pull numeric values
+  ddata<-as.data.frame(data)
+  wdata<-as.data.frame(data) 
+  outliers<-data.frame(subs=data[,1])
+  for(variable in variablelist){
+    #probablity values for outliers 
+    #(for mean=0,sd=1-->i.e., zscore probablity)
+    uwind<-pnorm(std)
+    lwind<-pnorm(-std)
+    #gets values of variable for probabilities
+    cut_point_top <-qnorm(
+      p=uwind,
+      mean=mean(ddata[,variable],na.rm=TRUE),
+      sd=sd(ddata[,variable],na.rm=TRUE))
+    cut_point_bottom <-qnorm(
+      p=lwind,
+      mean=mean(ddata[,variable],na.rm=TRUE),
+      sd=sd(ddata[,variable],na.rm=TRUE))
+    #replaces outlier variable values within new wdata dataframe
+    if(replaceval==TRUE){
+      wdata[,variable]<-ifelse(
+        ddata[,variable]>cut_point_top,cut_point_top,
+        ifelse(ddata[,variable]<cut_point_bottom,
+               cut_point_bottom,
+               ddata[,variable]))
+    }else{
+      wdata[,variable]<-ifelse(
+        ddata[,variable]>cut_point_top,NA,
+        ifelse(ddata[,variable]<cut_point_bottom,
+               NA,
+               ddata[,variable]))}
+    #makes dataset with outlier values replaced with windsorized values 
+    #(calling from inputted data dataframe)
+    outliers[,variable]<-ifelse(
+      (ddata[,variable]>cut_point_top | 
+         ddata[,variable]<cut_point_bottom),
+      ddata[,variable],NA)}
+  if(outlieroutput==TRUE){outputdata<-outliers
+  }else{outputdata<-wdata}  
+  return(outputdata)}
+
+pr.model <-
+  data_filt %>%
+  #make RT/error measures negative 
+  #so positive means good for all measures
+  mutate(Flanker_Pre_Incongruent_RT=
+           -Flanker_Pre_Incongruent_RT,
+         Time_Trial_B_Pre=
+           -Time_Trial_B_Pre,
+         DotComparison_RT_Pre=
+           -DotComparison_RT_Pre,
+         Imove_Swaps_Pre=
+           -Imove_Swaps_Pre) %>%
+  transmute(
+    `Flanker Incongruent`=
+      Flanker_Pre_Incongruent_RT,
+    `Trail Making Part B`=
+      Time_Trial_B_Pre,
+    `Spatial Working Memory`=
+      .[] %>% 
+      select(matches("SWM_ACC")) %>% 
+      rowMeans(na.rm=TRUE),
+    `Letter Nback (2 Back)`=
+      ACC_2back_Pre,
+    `Category Fluency (Animals + Vegetables)`=
+      CategoryFluency_Fruits_Veg_Pre+
+      CategoryFluency_Animals_Pre,
+    `Face-Scene (D')`=
+      Dprime_Pre, 
+    `Spatial Reconstruction (Swaps)`=
+      Imove_Swaps_Pre,
+    `Dot Comparison`=
+      DotComparison_RT_Pre,
+    `Digit Symbol Coding`=
+      Digit_Symbol_Correct_Pre, 
+    `CVLT Free Recall (Delayed)`=
+      Delayed_Free_Recall_Pre, 
+    `Story Free Recall (Delayed)`=
+      Story_Unit_Recall_Delayed_Pre
+    ) %>% 
+  windsorizefxn(.,names(.),replaceval=TRUE) %>%
+  as_data_frame()
+
+pr.model.comp2<-psych::principal(
+  pr.model, 
+  nfactors= 2 , 
+  rotate= "varimax" , covar= FALSE , scores=TRUE)
+
+pca_tbl_vals<-
+  rbind(
+    pr.model.comp2$loadings[,1:2],
+    pr.model.comp2$Vaccounted['Proportion Var',]
+    )
+pca_tbl_names<-
+  pr.model.comp2$loadings %>% 
+  row.names() %>% 
+  c(.,c('% Variance explained'))
+
+cell_bold<-function(x){ 
+  cell_spec(x,bold = T,format = 'html')
+}
+pca_table<-
+  pca_tbl_vals %>%
+  as_data_frame() %>%
+  transmute(
+    Task=pca_tbl_names,
+    `Component 1: Executive Function`=round(RC1,2) %>%
+      as.character %>%
+      ifelse(RC1>RC2 & Task!='% Variance explained',
+             cell_bold(.),.),
+    `Component 2: Declarative Memory`=round(RC2,2) %>%
+      as.character() %>%
+      ifelse(RC2>RC1 & Task!='% Variance explained',
+             cell_bold(.),.)
+    )
+
+
+pca_table %>%
+  kable(format = 'html',
+        escape = F,
+        caption = tbls('pca_table')
+        )%>%
+  kable_styling(
+    bootstrap_options = "striped", 
+    # full_width = F, 
+    position = "float_right"
+  )
+
+```
+
+###Executive Function Tasks
+
+_Flanker [@Eriksen1974]_.  Five arrows appeared in the center of the screen with a center arrow and two flanking arrows on each side. Participants were asked to respond to the direction of the center arrow. On half the trials, the center arrow was in the same direction as the flanking arrows [congruent trials] and, on the other half, the center arrow was pointed in the opposite direction as the other arrows [incongruent trials]. Average reaction time of the incongruent trials was used as the performance metric.
+
+_Trail Making [@Reitan1958]_. Participants were presented with a sheet of 25 numbers distributed across a sheet of paper. In ascending order and as fast as possible, participants drew connections between these numbers without lifting their pencil. A second sheet was then presented with digits and letters. Participants were instructed to draw connections between letters and digits by alternating between the two categories in ascending order. 
+
+_Letter NBack [@Kirchner1958; @Kane2007]_. Participants viewed a sequence of centrally presented letters. For each letter, participants were instructed to determine if the current letter matched the previous letter [first block, 1-back] or two letters back [second block, 2-back]. There were five 20-letter sequences per condition for a total of 100 trials [25 target trials for all conditions and 10 lure trials for the 2 back] per condition. Mean accuracy across the two back condition was used as the variable of interest.
+
+_Spatial Working Memory [@Erickson2011; @Greenwood2005]_. Participants viewed a configuration of black dots on the screen. After a brief delay, a red target dot probe appeared. Participants were instructed to detect whether the red dot probe was in the same or different position as the black dots. Forty trials [20 same and 20 different] per condition were presented with dot locations varying randomly. Average accuracy across conditions was used as the performance metric.
+
+_Digit Symbol Coding [@Wechsler1997]_.  Participants were instructed to write the symbol that corresponded to each digit amongst a list of digits. The goal was complete as many items in the list as possible within 2 minutes. Nine unique symbols corresponded to a specific digit [1-9], which was visible in a key participants were required to reference. The total number of correctly written symbols was used as the dependent measure.
+
+_Dot Comparison [@Boot2010]_. Two 4x4 matrices of dots were displayed to the left and right of fixation. Each dot was either filled or unfilled, creating a dot pattern. Participants were instructed to indicate whether the two dot patterns were the same or different. On half the trials, the dot pattern differed by one dot [one filled and one unfilled] and, on the other half, both dot patterns were the same. Performance was measured by mean response time across the experiment.
+Category Fluency. Participants were given a minute to name as many instances of a category as possible. Two categories were used: fruits/vegetables and animals. The total number of unique words from both categories was used to measure performance.
+
+###Declarative Memory Tasks
+
+_Face-Scene Relational Memory [@Monti2015]_. Participants are presented with a face and scene in the background. After each face-scene trial is presented, participants are asked to indicate whether they think the face fits with the scene. After 24 encoding trials of unique faces and scenes and a 20 second break, participants are then presented with another series of face-scene pairs. In this part, the task is to indicate whether the face-scene pair was present in the first part of the experiment. Participants are presented with 24 recognition trials. This same task was conducted with new face-scene pairs across 3 runs during the MRI session [with the fMRI results to be reported elsewhere].  The probability of hits minus the probability of false alarms [i.e., d’; @Snodgrass1988] was used to measure memory performance.
+
+_Spatial Reconstruction [@Watson2013]_. An arrangement of unique line drawings was presented. Participants were instructed to use the mouse to click on each drawing to indicate it was studied. This study period was self-paced. Following the study period and a 4000 ms delay, the drawings were aligned at the top of an otherwise blank screen. Participants were instructed to use the mouse to click and drag them into where they thought they were positioned in the study phase. Participants completed 3 practice trials and 15 real trials. Of interest were the percentage of “swaps” participants made across the 15 trials. A swap occurred when participants switched stimuli between two locations containing stimuli in the study arrangement [see @Watson2013 and @Monti2015].
+
+_Logical Memory Story Free Recall [@Wechsler1997]_. Participants listened to a story and instructed to recall as much as they could remember. After a 30 minute delay, participants were asked to recall as much from this story as possible. The dependent measure was the number of story units correctly recalled in the delayed free recall.
+
+_California Verbal Learning Test [version 2; @Delis2000]_. The experimenter read a list of 16 nouns drawn from four semantic categories. After the list was read, participants were instructed to recall as many words as possible. This procedure was performed for five consecutive trials [i.e., immediate recall trials]. After a twenty-minute delay, where participants performed a problem-solving task  [not part of this study], participants were instructed to recall as many words from the list as possible. The total number of words recalled after the long delay was used as the performance metric.
+
+##Structural MRI acquisition
+
+All imaging was performed on a 3T Siemens Trio MRI system with a 12 channel head coil. For each imaging session, high resolutions T1-weighted anatomical images were collected using a MPRAGE (Magnetization Prepared Rapid Gradient Echo) protocol (192 slices, GRAPPA acceleration factor of 2, voxel size= .9 x .9 x .9 mm, TR = 1900 ms, TI = 900 ms, TE = 2.32 ms, flip angle = 9°, FoV = 230 mm). 
+Structural surface reconstruction and processing
+Each participant’s T1 structural volume was processed through Freesurfer version 5.3 [@Fischl2000; http://surfer.nmr.mgh.harvard.edu/]. In summary, a surface reconstruction of the white matter/gray matter boundary and the cortical (pial) surface were created through non-brain tissue removal, Talaraich transformation, intensity normalization, segmentation of the grey/white matter boundary, and tessellation. Each reconstruction was visually checked for plausibility of the reconstruction and major topological inaccuracies were corrected with the recommended intervention procedures and reprocessed (i.e., white and pial surface edits and control points). Important to the current analyses, the surface area and thickness of each individual vertex was quantified. These quantities were smoothed with a 10 mm full-width half maximum Gaussian kernel across the surface. Finally, surface reconstructions were then transformed to a common spherical coordinate system based on cortical folding patterns. 
+
+The 7-network cortical parcellation created from a Freesurfer surface-based functional connectivity analysis [@Yeo2011; Figure 1) was used to assign each vertex to a network. This network parcellation was chosen given its creation with Freesurfer, its smaller number of comparisons between networks (compared to a 17 network parcellation also available) in inferential testing and convergence with other popular volume-based network parcellation schemes [e.g., @Power2011]. 
+
+For each subject, freesurfer-formatted surface files containing the areal quantities of each vertex (for both hemispheres) were imported into python using nibabel (see www.nipy.org/nibabel; version 2.1.0) and concatenated using pandas library tools [@pandas], creating a matrix of 165 rows (subjects) and 299374 columns  (each representing a morphometric estimation of individual vertices from surface models assigned to one of the network labels). For each network, seven individual network matrices were created by filtering vertices assigned to an individual network. These whole brain and individual network matrices were used in the machine learning pipeline and subsequent analyses detailed below.
+
+For each set of inferential analyses, we bootstrapped with 2000 replications with replacement [@Efron1993] to obtain bootstrapped 95% confidence intervals. A statistic was deemed significant if the confidence interval did not include 0. 
+
+```{r yeo_parc,fig.cap=figs('yeo_parc'), fig.aligh='center'}
+knitr::include_graphics(
+  '../figures/Yeo_Parcellation.png'
+  )
+```
+
+##Cognitive ability prediction analyses
+
+For a schematic of the prediction analysis workflow, see Figure 2. All analyses were performed in python using the sci-kit learn API [@sklearn].  A repeated five-fold cross validation procedure was used for training and testing [@Kohavi1995; see http://www.russpoldrack.org/2012/12/the-perils-of-leave-one-out.html]. That is, 100 random sets of 5-fold training and testing samples were obtained for the machine learning workflow detailed below.
+
+Within each fold’s training sample, vertex features (i.e., point-wise local morphometry) were ranked in terms of their univariate linear relationship with cognitive ability (i.e., target). We used a previous selection criteria in similar predictive analyses based on false discovery rate thresholds [@Shen2017; @Rosenberg2016; @Finn2015]. That is, vertices with alpha values equal to or less than an alpha threshold were selected and averaged together. These models were performed with three popular alpha thresholds (i.e., .05, .01, .001). These values were then used to fit a linear model (i.e., a single beta coefficient weight) using the cognitive ability scores as targets. This model was then used to predict the unseen testing sample participants’ cognitive abilities (i.e., selected vertices were summed together and multiplied by beta coefficient). 
+
+Test set predictions for each participant were averaged together across folds and iterations to obtain a single cognitive ability prediction for each participant. For each cognitive ability, we had 4 average predicted values for each subject: a percentile selection prediction and the 3 false discovery rate threshold selection predictions. For inferential testing, we averaged these 4 predicted values in order to decrease multiple comparisons and for ease of interpretation for subsequent analyses.  For simplicity and readability, these cortical thickness and surface area-based predictions of cognitive ability will be refered to simply as thickness or surface area where appropriate.
+
+
+For one set of models, the top k percent of vertices were selected and subsequently averaged together for each participant, creating a single cortical morphometric value (i.e., percentile models). In the percentile models, to obtain the k percentage that best predicted cognitive ability, we searched through two ranges of values: .0001 through .9 with 50 equally spaced steps and 1 through 100 with 100 steps (i.e., 1, 2, 3, 4, etc).  To assess test performance, the coefficient of determination (r squared) was used with the best possible score being 1.0, models performing at chance being 0.0, and models performing worse than chance being negative. The percentile that maximized the mean r squared value was selected as the point of interest (Figure 3). Note, for complete unbiased prediction estimates, we would need an independent test set after selecting k. However, we used this percentile search for each network so the bias was equal across networks, and our inferences concerned comparisons between networks (but see discussion section for future study).
+
+Furthermore, controlling for this general effect of global morphometry may be important for our understanding of of specific networks, age, and cognition. Thus, we examined specific effects of morphometry on all analyses after controlling for global cortical morphometry.
+
+```{r workflow,fig.cap=figs('workflow')}
+knitr::include_graphics(
+  '../figures/workflow.png'
+  )
+```
+##Predictive ability of cognitive ability with cortical morphometry
+
+We first assessed the relationship of predicted and actual cognitive scores after controlling for covariates in two separate analyses. We controlled only for gender in the first set of analyses, and gender and whole brain thickness in the second set of analyses by extracting the residuals of a linear model predicting observed cognitive performance from the two covariates. We obtained a distribution of partial correlation coefficients across 2000 samples using the bootstrap procedure [@Efron1993]. A partial correlation coefficient was deemed significant if the confidence interval did not include 0. This bootstrapped procedure was performed for each feature selection procedure (.001, .01, and .05 false discovery alpha parameters and the selected percentile) for each network but inferences were drawn from the average prediction values.
+
+Stepwise regression analyses were also performed. Gender and global cortical thickness was added in the first two steps. Network thickness was added in the third step. Summary statistics for each added variable are reported in table 2. 
+
+##Cortical morphometry predictive model mediation analysis of age and cognitive ability
+
+An important question is whether the predictive ability of cortical thickness of the different functional networks mediates the relationship between age and cognition [@Hedden2014; @Kirchhoff2014; @Salthouse2011a]. To answer this question, we ran two sets of mediation analyses using the mediation R package [@mediation]. We first tested whether cortical thickness mediated the age and cognitive ability relationship with gender as a covariate.  Next, whole brain thickness was added as an additional covariate to these previous mediation models. Accelerated bootstrapped 95% CIs were used to assess significance of the mediation effect (significance was determined if the confidence interval did not cross zero). 
+
+##Exploratory Univariate Whole Brain Analysis
+
+Relationship of cortical thickness and cognitive abilities. To examine the relationship of individual vertices and each cognitive measure, we calculated the pearson correlation coefficient between the (actual) thickness of each vertex and cognitive ability scores. To generate more robust measures of this relationship, we performed this analysis across 2000 bootstrapped samples [@Efron1993]. For each vertex, we calculated a bootstrap ratio (BSR) of the average bootstrap correlation divided by the standard error of the bootstrapped correlation across samples (see @Burzynska2015; @Garrett2015]. We then thresholded each vertex’s BSR (3.3 and 4.25). A count of surviving vertices for each network was calculated.
+
+To infer the importance of networks in analyses, we shuffled network labels of each individual surface vertex and ran the above analyses to create a “shuffled distribution” (i.e., null distribution) across 100 permutations and obtained the mean and standard error of this distribution. Finally, to create a z-score statistic, we subtracted the actual count of vertices for each network by the permuted mean count and divided by the permuted standard error and used associated alpha values of .001 to assess significance (Bonferonni correction for 7 comparisons). 
+All whole brain analyses were performed in python sci-kit learn [@sklearn] utilities for resampling and calculations of statistics.
+The mediating effect of whole brain cortical thickness on the age and cognition relationship. Although not done yet, I also plan on running a mediation analysis (described in a previous section) for each vertex using the same bootstrap procedure.
+
+# Results
+
+
+```{r stat_figures}
+NetworkColors<- c(
+  rgb(120,18,134,maxColorValue = 255),
+  rgb(70,130,180,maxColorValue = 255),
+  rgb(0,118,14,maxColorValue = 255),
+  rgb(196,58,250,maxColorValue = 255),
+  rgb(128,128,128,maxColorValue = 255),
+  rgb(230,148,34,maxColorValue = 255),
+  rgb(205,62,78,maxColorValue = 255)
+  )
+TypeAlphaColors<- c(
+  "average"='black',
+  "alpha: 0.01" = 'white',
+  "alpha: 0.05" = 'white',
+  "alpha: 0.001" = 'white'
+  )
+#load bootstrapped stats and permutation stats
+load(str_c(
+  '../data/stats/',
+  'bootstrap_corrmodels_fromcv_predict.RData'
+  ))
+load(str_c(
+  '../data/stats/',
+  'perm_pvals_fromcv_predict.RData'
+  ))
+#ggplot figure fxn
+make_ggplot <- function(bootstrap_df,modeltype,sizenum=1){
+  'ggplot code for all correlation stats'
+  graph_df<-bootstrap_df %>%
+    ungroup() %>%
+    unnest(corr_stats) %>%
+    select(np_measure_name:threshold,one_of(modeltype)) %>%
+    unnest() %>%
+    mutate(np_measure_name=np_measure_name %>% 
+             str_replace('ExFunction','Executive Function'),
+           type_alpha=type_alpha %>%
+             str_replace_all(c('alpha: '='','0\\.'='\\.')),
+           measure=measure %>% 
+             str_replace_all(c('area'='Surface Area',
+                               'thickness'='Thickness')),
+           network=network %>% 
+             str_replace('network',''))
+  names(graph_df) <- 
+    str_replace(names(graph_df),'prop_ex','corr')
+  graph_df %>%
+    ggplot(aes(x=network,y=corr))+
+    geom_bar(
+      stat='identity',
+      aes(group=type_alpha,
+          fill=network,
+          color=type_alpha),
+      size=sizenum,
+      position = position_dodge(width = 1)
+    )+
+    geom_errorbar(
+      aes(ymax = upper, 
+          ymin = lower,
+          group=type_alpha),
+      width=.2,color='black',
+      position = position_dodge(width = 1)
+    ) +
+    facet_grid(np_measure_name~measure) +
+    guides(size=FALSE) +
+    scale_fill_manual(values=NetworkColors,guide=FALSE)+
+    scale_color_manual(values = TypeAlphaColors,guide=FALSE) +
+    theme_bw()+
+    theme(
+      text=element_text(family="Helvetica"),
+      panel.grid=element_blank(),
+      strip.text= element_text(size=10),
+      strip.background = element_rect(colour="black",fill="white"),
+      axis.text=element_text(size=10),
+      axis.text.x = element_text(),
+      legend.position=c(.8,.85)
+    )
+}
+```
+
+
+```{r npdata_corrs, results='hide'}
+str_remove <- function(str,patt){str_replace(str,patt,'')}
+load(str_c(
+  '../data/stats/',
+  'bootstrap_npdata_corrmodels',
+  '_fromcv_predict.RData'
+  ))
+
+boot_npdata_str <- bootstrap_npdata_corrmodels %>%
+  mutate(bootstr=str_c(
+    '_r_ = ',round(corr,2),
+    ' _BCA 95% CI_ [',round(lower,2),
+    ' ',
+    round(upper,2),
+    ']'
+    ),
+         key=key %>% str_remove('wholebrain_|unction|ory'),
+         key2=key2 %>% str_remove('wholebrain_|unction|ory'),
+         key_all=str_c(key,'_',key2)) %>%
+  ungroup() %>%
+  select(key_all,bootstr) %>%
+  spread(key_all,bootstr)
+```
+
+
+Participants’ cognitive ability composite scores were significantly related to age for both declarative memory (`r boot_npdata_str$Mem_Age`) and executive function (`r boot_npdata_str$ExF_Age`).
+
+```{r permutation_stats,results='hide'}
+load('../data/stats/perm_pvals_fromcv_predict.RData')
+
+perm_meansd_spread <- 
+  perm_pvals %>%
+  mutate(perm_str_meansd=str_c(
+    round(perm_mean,3),
+    '(',round(perm_sd,3),')'
+    )) %>%
+  select(-pval,
+         -matches('perm_(total|mean|sd|great)')) %>%
+  spread(analysis,perm_str_meansd)
+
+perm_pval_spread <- 
+  perm_pvals %>%
+  select(-matches('perm')) %>%
+  spread(analysis,pval)
+
+perm_meansd_spread %>% filter(type_alpha=='average')
+perm_pval_spread %>% filter(type_alpha=='average')
+```
+##Relationship of Cortical Thickness Predictive Models and Cognition
+
+```{r training_stats}
+source('../scripts/make_cv_dfs.R')
+str_meansd<- function(df,x,num) {
+  mean_str=str_c(x,'_mean')
+  sd_str=str_c(x,'_sd')
+  str_c(round(df[[mean_str]],num),
+        ' (',round(df[[sd_str]],num),')'
+  )}
+
+cv_results_all<- 
+  make_cv_results_df(
+    cv_results_filestr = 
+      '../data/cv_results/cv_results_fpr_df_5fold.csv'
+  ) %>%
+  transmute(
+    np_measure_name,
+    measure,
+    network,
+    threshold=ifelse(
+      round(threshold,2)==.02,
+      'average',
+      round(threshold,3) %>% as.character()
+    ),
+    coef=ifelse(
+      coef_mean>0,
+      str_meansd(.,'coef',2) %>% 
+        cell_spec(.,color='red'),
+      str_meansd(.,'coef',2) %>%
+        cell_spec(.,color='blue')
+    ),
+    num_features=str_meansd(.,'num_features_selected'),
+    nofeatures=str_c(
+      round(nofeatures_selected_mean,2)*100,' %'
+    )) %>%
+  gather(stat,value,
+         -np_measure_name,-measure,-network,-threshold) %>%
+  mutate(network=network %>% 
+           str_remove('network'),
+         np_measure_name=np_measure_name %>%
+           str_replace('ExFunction','Executive Function'))
+
+#grouped cols:np_measure_name,measure,threshold,network,stat
+#unite: grouped cols you want across columns
+#group_by/spread: grouped cols you want down rows
+#drop_vars<-c('stat','threshold')
+drop_vars<-c('threshold')
+row_tbl_vars<-c('np_measure_name','network')
+col_tbl_vars<-c('stat','measure')
+#col_tbl_remove_regex='(area|thickness)'
+col_tbl_remove_regex='_.*$'
+threshold_vars<-c('average')
+
+row_tbl_vars_num<-row_tbl_vars %>%
+  length()
+col_vars_num<-cv_results_all[[col_tbl_vars[2]]] %>% 
+  unique() %>% 
+  length()
+
+cv_results_table <- 
+  cv_results_all %>%
+  filter(threshold %in% threshold_vars) %>%
+  unite(colnames,one_of(col_tbl_vars)) %>%
+  select(-one_of(drop_vars)) %>%
+  group_by_at(row_tbl_vars) %>%
+  spread(colnames,value) 
+
+col_var_names<-
+  cv_results_table %>% 
+  names(.) %>% 
+  str_extract('area|thickness') %>% 
+  str_replace_all(c(
+    'area'='Surface Area',
+    'thickness'='Thickness'
+  )) %>%
+  str_replace_na('')
+
+cv_results_table %>%
+  kable(format = 'html',
+        escape = F,
+        col.names = col_var_names) %>%
+  kable_styling(
+    bootstrap_options = "striped", 
+    # full_width = F, 
+    position = "float_right"
+  ) %>%
+  column_spec(1:row_tbl_vars_num, bold = T) %>%
+  collapse_rows(1:row_tbl_vars_num) %>%
+  add_header_above(c(
+    " " = row_tbl_vars_num,
+    "Coefficient M (SD)" = col_vars_num,
+    "% of Folds with No Features Selected" = col_vars_num,
+    "Number of Features Selected M (SD)" = col_vars_num
+  )) %>%
+  footnote(str_c(
+    'Networks are labeled by index in Yeo et al., 2011: ',
+    '1 = Visual, ',
+    '2 = Somatomotor, ',
+    '3 = Dorsal Attention, ',
+    '4 = Salience, ',
+    '5 = Limbic, ',
+    '6 = Control, ',
+    '7 = Default; ',
+    'Linear regression training coefficient weights are color coded ',
+    'by positive (red) or negative (blue) ',
+    'for easier reading .'
+  )
+  
+  )
+```
+
+```{r cognition,fig.cap=figs('cognition')}
+corr_cntrl_gender<-bootstrap_corrmodels %>% 
+  make_ggplot(modeltype = 'corr_cntrlgender') +
+  labs(
+    x='Functional Networks (Cortical Morphometry)',
+    y='Partial Correlation Coefficient'
+    )+
+  scale_y_continuous(
+    limits=c(-0.32,.52),
+    breaks=round(seq(-.3,.5,.1),3)
+    )
+#ggsave("Correlations_CntrlGender.png",
+#       width=6,height=6)
+corr_cntrl_gender_wb<- bootstrap_corrmodels %>% 
+  make_ggplot(modeltype = 'corr_cntrlgender_wb') +
+  labs(
+    x='Functional Networks (Cortical Morphometry)',
+    y='Partial Correlation Coefficient'
+    )+
+  scale_y_continuous(
+    limits=c(-0.32,.52),
+    breaks=round(seq(-.3,.5,.1),3)
+    )
+#ggsave("Correlations_GenderWholebrain.png",
+#       width=6,height=6)
+grid.arrange(corr_cntrl_gender,
+             corr_cntrl_gender_wb,
+             nrow = 1)
+```
+As displayed in figure 4 (left), cortical thickness significantly predicted cognitive ability for both executive function and memory, after controlling for gender (with frontoparietal network showing marginal significance for memory). When controlling for global cortical thickness, more specific network and cognitive effects emerged. Default mode, limbic, and somatomotor network thickness remained significantly related to both cognitive abilities but visual, dorsal attention, and frontoparietal network thickness became insignificantly related to both cognitive abilities (Figure 4). Ventral attention network thickness remained significantly related to executive function but not memory (Figure 4). 
+
+In the stepwise regression analyses, gender, whole brain thickness, and network thickness were sequentially added to a regression model. Gender significantly predicted memory performance but not executive function. Global thickness significantly improved the model fit for both executive function and memory. Network-based thickness followed the same pattern observed as in partial correlation analyses: default mode, limbic, and somatomotor network thickness significantly improved model fit over and above gender and global thickness for both cognitive abilities but ventral attention thickness improved model fit only for executive function. Interestingly, the ventral attention network thickness, compared to the somatomotor and default mode networks, accounted for an average of two times executive function ability score variance over and above gender and global thickness (10% and 5%, respectively). 
+
+##Relationship of Cortical Thickness Predictive Models and Age
+```{r age,fig.cap=figs('age')}
+
+corr_age_cntrl_gender <- bootstrap_corrmodels %>% 
+  make_ggplot(modeltype = 'corr_age_cntrlgender') +
+  labs(x='Functional Networks (Cortical Morphometry)',
+       y='Partial Correlation Coefficient')+
+  scale_y_continuous(limits=c(-0.32,.52),
+                     breaks=round(seq(-.3,.5,.1),3))
+#ggsave("CorrelationsAge_GenderWholebrain.png",
+ #      width=2.4,height=6)
+corr_age_cntrl_gender_wb <- bootstrap_corrmodels %>% 
+  make_ggplot(modeltype = 'corr_age_cntrlgender_wb') +
+  labs(x='Functional Networks (Cortical Morphometry)',
+       y='Partial Correlation Coefficient')+
+  scale_y_continuous(limits=c(-0.32,.52),
+                     breaks=round(seq(-.3,.5,.1),3))
+#ggsave("CorrelationsAge_GenderWholebrain.png",
+ #      width=2.4,height=6)
+grid.arrange(corr_age_cntrl_gender,
+             corr_age_cntrl_gender_wb,
+             nrow = 1)
+```
+
+Similar to the relationship with cognition, cortical thickness was related to age for all individual networks (figure 5, left). After controlling for global thickenss, the thickness of four networks remained significantly related to age (visual, somatomotor, limbic, and ventral networks). The relationship of default mode network thickness (for thickness-based predictive values of executive function but not memory) displayed a marginally significant relationship after accounting for global thickness (p = .055; Figure 5).
+
+##Mediation Effects of Cortical Thickness Predictive Models of the Relationship of Age and Cognition
+
+```{r age_cognition_mediation,fig.cap=figs('mediation')}
+
+mediation_cntrl_gender <- 
+  bootstrap_corrmodels %>% 
+  make_ggplot(modeltype = 'corr_age_cntrlgender') +
+  labs(x='Functional Networks (Cortical Morphometry)',
+       y='Partial Correlation Coefficient')+
+  scale_y_continuous(limits=c(-0.32,.52),
+                     breaks=round(seq(-.3,.5,.1),3))
+#ggsave("CorrelationsAge_GenderWholebrain.png",
+ #      width=2.4,height=6)
+mediation_cntrl_gender_wb <- 
+  bootstrap_corrmodels %>% 
+  make_ggplot(modeltype = 'corr_age_cntrlgender_wb') +
+  labs(x='Functional Networks (Cortical Morphometry)',
+       y='Partial Correlation Coefficient')+
+  scale_y_continuous(limits=c(-0.32,.52),
+                     breaks=round(seq(-.3,.5,.1),3))
+#ggsave("CorrelationsAge_GenderWholebrain.png",
+ #      width=2.4,height=6)
+grid.arrange(mediation_cntrl_gender,
+             mediation_cntrl_gender_wb,
+             nrow = 1)
+```
+
+Given the significant relationships between age, cognitive, and network thickness-based predictions, we examined whether the relationship of age and cognition was mediated by cortical thickness (see figure 6). Across all mediation models, all direct effects were significant, showing that age was significantly related to cognition independent of cortical thickness (ps < .001). For mediation (indirect) effects of thickness, a cognitive ability-specific pattern emerged. That is, the thickness of all networks partially mediated the age-executive function relationship (with the exception of the dorsal attention network), but thickness of all networks did not mediate the age-memory relationship (figure 6). When controlling for global thickness, only somatomotor (p < .05) and ventral attention network thickness (p < .001) partially mediated this age-executive function relationship with the default mode network showing a marginal significance.
+
+As @Hedden2014 found global thickness to mediate both executive function and memory, we tested whether this finding held in the current sample. In other words, rather than using global thickness as a covariate, we used it as the mediating variable. In line with @Hedden2014, global thickness partially mediated age and cognitive ability (both memory and executive function) relationships, although these results should be interpreted cautiously as the effect was not strong (memory: c = -.01, p < .05, BCA 95% CI: [ -.02, -0.001 ]; executive function: c = -.005, p < .05, BCA 95% CI: [ -.01, 0 ]).
+
+##Exploratory Whole Brain Analysis of the Relationship Between Cortical Morphometry and Cognition
+
+To compliment prediction analyses, we used bootstrapped, exploratory whole brain analyses to examine the spatial extent of the relationship between cortical morphometry and cognition in each a priori defined network. Figure 7 contains the number of significant vertices for each network compared to chance level for each network (i.e., shaded region in figure). Table 4 contains regional clusters for a BSR threshold of 4.25 and that had more than 100 contiguous vertices (although inferential analyses included all significant vertices above thresholds, only these clusters are listed in Table 4 for display purposes). The table shows that the most robust clusters of significant vertices lie within the left hemisphere.  
+
+ The relationship of the cortical thickness of default mode and somatomotor network to both memory and executive function had a significantly greater number of vertices that survived the two chosen BSR thresholds of 3.3 (99% confidence; p<.001) and 4.25 (99.9% confidence; p<.0001) than chance (Figure 7). The cortical thickness of the ventral attention network had a significantly greater number of vertices surviving the two thresholds for executive function (p < .001) but significantly less than chance for memory (p < .001; Figure 5). All other networks were either significantly less than chance or did not differ significantly from chance (Figure 7). Displayed in Figure 6 is a visualization of clusters above the 3.3 BSR threshold (for easier viewing we only included clusters of contiguous vertices above a surface area of 300 mm contiguous vertices).
+
+```{r whole_brain_numvertex_analysis,fig.cap=figs('numvertex')}
+
+NetworkLabels=c(
+  '1'='Visual',
+  '2'='Somato-\nmotor',
+  '3'='Dorsal\nAttention',
+  '4'='Ventral\nAttention',
+  '5'='Limbic',
+  '6'='Fronto-\nparietal',
+  '7'='Default'
+  )
+cv_perm<- read_csv(str_c(
+  '../data/',
+  'wholebrain_bootstrap/',
+  'wholebrain_bootstrap_bootscore_permtests.csv'
+  ))
+cv_perm_clean <- 
+  cv_perm %>%
+  rename(threshold=X3) %>%
+  mutate(anal= pklfile %>%
+           str_extract('regression|mediation'),
+         measure= pklfile %>%
+           str_extract('thickness|area') %>%
+           str_replace_all(c('thickness'='Thickness',
+                             'area'='Surface Area')),
+         np_measure_name= pklfile %>%
+           str_extract('ExFunction|Memory') %>%
+           str_replace('ExFunction','Executive Function'),
+         annot_label= network %>%
+           as.character()) %>%
+  select(-pklfile)
+make_wholebrain_ggplot <- function(analtype)
+  {cv_perm_clean %>%
+    filter(anal==analtype) %>%
+    ggplot(aes(x=annot_label,
+           fill=annot_label,
+           color=annot_label,
+           group=interaction(threshold,annot_label))) +
+    geom_bar(stat='identity',
+             position='dodge',
+             aes(y=empirical_vals))+
+    geom_bar(stat='identity',
+             position = 'dodge',
+             alpha=.2,fill='black',
+             color='grey',
+             aes(y=perm_meansigvertices)) +
+    facet_grid(np_measure_name~measure) +
+    scale_fill_manual(values=NetworkColors,guide=FALSE)+
+    scale_color_manual(values=NetworkColors,guide=FALSE)+
+    labs(y='Number of Vertices',x='Network') +
+    theme_bw()+
+    theme(
+      text=
+        element_text(family="Helvetica"),
+      panel.grid=
+        element_blank(),
+      strip.text= 
+        element_text(size=12,face = 'bold'),
+      strip.background = 
+        element_rect(colour="black",fill="white"),
+      axis.text=
+        element_text(size=10),
+      axis.title=
+        element_text(face='bold'),
+      axis.text.x = 
+        element_text(angle = 0, hjust = .5),
+      plot.title = 
+        element_text(hjust = 0.5)
+      )
+  }
+wb_mediation<- make_wholebrain_ggplot('mediation')+
+  ggtitle('Mediation of the Age ~ Cognition Relationship')
+#ggsave('../figures/numvertices_mediation_bootstrap.png',dpi = 300,width = 8,height = 6)
+wb_regression<- make_wholebrain_ggplot('regression') +
+  ggtitle('Relationship with Cognition')
+#ggsave('../figures/numvertices_regression_bootstrap.png',dpi = 300,width = #8,height = 6)
+grid.arrange(wb_mediation,
+             wb_regression,
+             nrow = 1)
+```
+
+
+```{r spatial_pattern,fig.cap=figs('spatial_pattern')}
+#load png from the
+#visualize_wholebrain_mediation_regression
+#ipython notebook output
+#uses a program that takes screenshots
+#of imported overlays so not directly
+#using code
+knitr::include_graphics(str_c(
+  '../figures/',
+  'wholebrain_mediation_regression.png'
+  ))
+```
+
+# Discussion
+
+One emerging view in the cognitive neuroscience of aging is that cortical structural declines follow a functional network organization. In the current study, we investigated whether (and how) the cortical morphometry of individual functional networks predicts cognition and its mediating role in the age-cognition relationship in older adults using an extensive variety of cognitive tasks spanning several well-established age-related laboratory and psychometric paradigms. We show specific and common patterns of functional network cortical morphometry related to executive function and declarative memory abilities.
+
+In terms of cortical morphometric phenotypes, cortical thickness, but not surface area, predicted cognitive ability. This relationship was widespread such that the thickness of all individual functional networks and global thickness predicted cognitive abilities and age. The thickness of the default mode, limbic, and somatomotor cortex predicted cognition for both cognitive abilities over and above global thickness, providing a unique role for these networks in general (common) cognitive ability. Ventral attention thickness predicted executive function, but not memory, after accounting for global thickness. As expected, visual network thickness, primarily used as a control region in previous studies (e.g., Head et al., 2008), did not predict either cognitive ability after controlling for global thickness. Unexpectedly, despite the role of the dorsal attention and frontal parietal networks in working memory and cognitive control processes (Duncan 2000), these two networks did not predict either cognitive ability after controlling for global thickness.
+Global cortical thickness partially explained the relationship of age and both executive function and memory, in line with a previous study using a similar age range of older adults (Hedden et al., 2014). However individual network cortical thickness only mediated the age and executive function relationship and not declarative memory, showing that global and specific thickness effects may be related to distinct mechanisms. Similar to the correlations with cognition, only the somatomotor, default mode and ventral attention network mediated the age-cognition relationship after controlling for global thickness. 
+
+In line with the prediction analyses, the exploratory whole brain analyses revealed that the thickness of the default mode network and somatomotor networks contained significantly more regions associated with both cognitive abilities than due to chance while only ventral attention thickness exhibited this pattern for executive function. Many of the declarative memory-related regions (e.g., the posterior cingulate cortex in the default mode network in Figure 8) were largely circumscribed to executive function-related regions but with fewer significant associations. This is consistent with the idea that declarative memory also recruits general control processes but to a lesser extent than executive function tasks (see Salthouse et al., 2003). Indeed, declarative memory decline during cognitive aging is thought of as a disruption of executive function processes (Buckner 2004).
+
+Taken together, this investigation provides clues into how we can discover useful organizing principles from functional networks (or any other modality) in the ongoing search to understand the structure, cognition, and age relationship in older adults.
+
+###Implications for the selection of cortical morphometric phenotype in older adults
+
+Surprisingly, little research has investigated the regional cortical surface area and cognitive ability relationship in the same population of older adults. One study, Dickerson and colleagues (2009), did not find evidence of a relationship of cortical surface area and declarative memory task performance but this investigation was confined to a priori-defined regions of the medial temporal cortex with a much smaller sample. 
+
+In samples of young and middle aged adults, cortical surface area, but not cortical thickness, was associated with cognition (Vuoksimaa et al., 2014; Colom et al., 2013 but see Choi et al., 2008). The relationship of cognitive abilities and cortical surface area, in contrast to cortical thickness, appears to have a genetic origin (Vuoksimaa et al., 2014) and stability throughout the lifespan (Schnack et al., 2014; Walhovd et al., 2016). Yet, in the current study, we find the opposite: thickness but not surface area displays relationships with cognition. Individual differences in cortical thickness, rather than surface area, may be more predictive of cognition in older adult samples as a result of age-related processes. Indeed, cortical thickness, more so than surface area, has been found to be the major contributor to age-related decline in cortical volume (Storvse et al., 2014). Furthermore, neuronal structural complexity, rather than a loss of neuronal number, may partially underlie brain volume decline in normal aging (Freeman et al., 2008).  Cortical surface area is thought to mark neuronal number (Rakic 1988, 2009) whereas cortical thickness is hypothesized to mark neuronal structural complexity, although this has not been empirically confirmed (Fjell et al., 2015). Aging leads to a reduction in neuronal complexity through a reduction in the number of dendritic spines and synapses and reduced intracortical mylenation rather than a reduction in neuronal number (Fjell et al., 2010; Freeman et al., 2008).  If cortical thickness indexes this age-related neuronal degeneration, the results of the current study may provide clues into the age-related changes in brain structure. However, given the cross sectional nature of the current study, future work should apply this network based approach in longitudinal designs and intervention-based studies proven to change cortical structure (Colcombe et al., 2004).
+
+###Network- and Cognitive- Specificity of Cortical Thickness, Age and Cognition Relationships 
+
+The current study provides further evidence for the role of the default mode network (DMN) in aging and cognition by supporting the hypothesized role of DMN structural integrity (Sun et al., 2016; Fjell et al., 2014) and adding to the consistent role of the DMN’s functional integrity in cognitive aging (Andrews-Hanna et al., 2007). Importantly, these results set the stage for linking cortical thickness to lifestyle factors (Voss et al., 2010, 2016) and fitness intervention-related changes (Voss et al., 2010) sensitive to individual differences in DMN functional integrity. Extensive research has shown cortical volume (a product of surface area and thickness but more related to surface area) changes via voxel based morphometric measurements (Colcombe et al., 2003, 2004), but cortical thickness of the default mode network may be more sensitive to experience-related effects such as employment during retirement or fitness.
+
+In addition to the default mode network, the ventral attention (salience) network displayed a robust, yet specific, relationship with executive function ability but not declarative memory, in line with a previous whole-brain functional connectivity study (Onoda et al., 2012). Touroutoglou and colleagues (2012) found functional connectivity within a subnetwork of the ventral attention network to be associated with specific to attention and processing speed task performance (tasks that are thought to rely on executive functions; Salthouse et al., 2003). This subnetwork largely overlapped with important regions predicting executive function ability in the current study. Indeed, ventral attention regions in the current study (e.g., anterior insula) have been widely implicated in domain-general attention control (thought to be largely driven by the ability to suppress irrelevant stimuli that declines with age) and task set maintenance (Nelson et al., 2010; Dosenbach et al., 2008). A large body of work has implicated aging deficits in attentional capture (Kramer et al., 1994, 2000, 2001), which may be due to deficits in the competitive balance between bottom-up and top-down attention (Corbetta and Shulman 2002) related to the structural integrity of the ventral attention network.
+
+Given that the portion of the ventral attention network predictive of executive function was a subset of the larger network and the brain’s interactions happen on multiple scales (Sporns and Betzel 2016), it may be fruitful to hone in on a finer grained functional network parcellation in future studies investigating functional network organizing principles of thickness-cognition relationships in older adults (i.e., 17 network parcellation in Yeo et al., 2011). 
+
+###Limitations and Future Study
+
+A major strength of the current studies design was the inclusion of both cognitive science and psychometric tests to form broad ability factors, a potentially more stable measures of individual differences (Braver et al., 2010). However, two limitations of this approach are the (a) unknown psychometric properties of the current combination of tasks and (b) the disagreement about what general (common) executive function represents (see Salthouse 2003, 2005 and Friedman and Miyake 2017 for discussions). Furthermore, in the percentile feature selection feature, we used the same sample for cross validation and testing. However, for the majority of the networks (except the somatomotor network for executive function), the percentile search had very similar predictive values as the predetermined false discovery rate criteria analyses, suggesting any bias caused by the percentile feature selection parameter search did not drastically change the results or inferences.
+
+Ultimately, the current study must be validated in an independent sample, given its data-driven nature and issues described above. One approach would be to determine if one can extend these results in an independent sample using psychometrically validated cognitive dimensions strongly linked to executive functions (Salthouse et al., 2003, 2005). In chapter 3, I use plan to use this approach using a set of reference cognitive variables (Salthouse et al., 2004) in an independent data set of community dwelling older adults.
+Finally, functional connectivity of the salience and default mode network have been linked to age-related, yet preclinical, biomarkers of structural pathology (Schultz et al., 2017). As we did not screen for such preclinical pathology that could go undetected through MRI screenings or diagnosed pathologies (see Ferreira et al., 2016), these mechanisms may provide an explanation for the current pattern of results. Although the mediating influence of global biomarkers of pathology, cortical thickness, and functional connectivity has been investigated (Hedden et al., 2014), a network-based approach to multiple biomarkers of these networks may help elucidate the mechanisms of aging and age-related disease.
+
+###Conclusions
+
+We used functional connectivity as an organizing principle to explore individual differences in cortical morphometry, cognition, and age in older adults. Our investigation found, independent of global thickness, the regional thickness of the default mode and somator motor network predicted age-related declarative memory and executive function abilities (a network-specific and cognitive-general pattern). The ventral attention network only predicted executive function (a network and cognitive specific pattern). Each of these three networks partially mediated the age-cognition relationship, but only for executive function. The results show the cortical morphometry of specific functional networks suggest specific networks may be especially important in cognitive aging. Future studies should investigate finer-grained functional network parcellations and use related cognitive ability constructs to hone the source of the observed relationships.
+
+#TO ADD
+- perm stats in text
+- text on surface area analyses addition (in results and discussion)
+- percentile selection but as follow up analysis (see section below on text in preliminary manuscript that included percentile selection)
+
+__Percentile Cross Validation Model Selection__
+
+- __Reasoning for not including surface area in preliminary analyses:__
+- For cortical surface area, our percentile feature selections cross validation analyses revealed no model performed significantly better than chance (i.e., average test performance was not greater than 0 for any percentile and/or much of the 95% confidence intervals across iterations included below chance performance. Additionally, many of the folds in the false discovery rate threshold selection analyses did not retain any vertices in the most conservative threshold (p > .001). Thus, we excluded cortical surface area from further analyses. 
+
+- __Percentile text__
+Test performance (coefficient of determination) of models predicting cognitive ability with cortical morphometry are shown in figure 3 for the portion of the cross validation search ranging from one to one hundred percent of vertices selected.  For the cortical surface area cross validation search, no model significantly performed better than chance (i.e., average test performance was not greater than 0 for any percentile and/or the 95% confidence intervals across iterations were an r squared of 0. Thus, we excluded cortical surface area from further analyses. 
+
+For all network models with cortical thickness, we obtained a k percentile of vertices selected that maximized r squared at a level that was significantly above chance (black points in figure 2; executive function: 68% for the visual network, .276% for the somatomotor network (not shown in figure as it is outside range visualized), 100% for the dorsal attention network, 14% for the ventral attention network, 9% for the limbic network, 11% for the frontoparietal network; 15%; for the default mode network; memory: 37% for the visual network, 76% for the somatomotor network, 100% for the dorsal attention network, 85% for the ventral attention network, 14% for the limbic network, 63% for the frontoparietal network; 55%; for the default mode network).  
+
+For all predictive analyses in this shuffled set, test performance differences across networks did not change (see figure 3 for permuted/ shuffled percentile model cross validation in grey). When all vertices were included, these models performed significantly above chance. This suggests that global cortical thickness may also be important in relationships with cognition. 
+
+Figure 3. Test prediction performance (coefficient of determination) for 1 to 100 percent of vertices selected for (top) cortical thickness and (bottom) cortical surface area.  For each network and cognitive ability, a black point displays the percentile with maximum test performance across both percentile search ranges (1 to 100 percent and .0001 to .9 percent). Note, percentiles with maximum test performance for cortical thickness of  the somatomotor and limbic networks predicting executive function and the surface area of the ventral attention and somatomotor networks are located within the lower percentile search. The test performance of the shuffled models are shown in light grey in each panel.
+
+
+# References
